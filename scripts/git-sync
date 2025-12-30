@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+  printf 'Usage: %s [--prune] [--dry-run] [--merged-only] [--check-force-push]\n' "$(basename "$0")" >&2
+  printf '\nOptions:\n' >&2
+  printf '  --prune           Delete local branches that have been merged or are gone from remote\n' >&2
+  printf '  --dry-run         Show what would be done without making changes\n' >&2
+  printf '  --merged-only     Only process merged branches (skip tracking stale branches)\n' >&2
+  printf '  --check-force-push Check if current branch has been force-pushed on remote\n' >&2
+  exit 2
+}
+
+prune=false
+dry_run=false
+merged_only=false
+check_force_push=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --prune) prune=true ;;
+    --dry-run) dry_run=true ;;
+    --merged-only) merged_only=true ;;
+    --check-force-push) check_force_push=true ;;
+    -h|--help) usage ;;
+    *) printf 'Unknown option: %s\n' "$1" >&2; usage ;;
+  esac
+  shift
+done
+
+main_branch=$(git rev-parse --abbrev-ref origin/HEAD 2>/dev/null | sed 's|^origin/||' || echo 'main')
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+
+printf 'Main branch: %s\n' "$main_branch"
+printf 'Current branch: %s\n' "$current_branch"
+
+# Fetch latest to update remote tracking
+if [[ "$dry_run" = false ]]; then
+  printf '\nFetching remotes...\n'
+  git fetch --quiet --prune
+else
+  printf '\n[dry-run] Would fetch remotes\n'
+fi
+
+# Find branches to clean
+branches_to_remove=()
+branches_stale=()
+
+while IFS= read -r branch; do
+  [[ -z "$branch" ]] && continue
+  [[ "$branch" = "$current_branch" ]] && continue
+  [[ "$branch" = "$main_branch" ]] && continue
+  [[ "$branch" =~ ^(HEAD|develop|staging|production)$ ]] && continue
+
+  # Check if merged to main
+  if git merge-base --is-ancestor "$branch" "origin/$main_branch" 2>/dev/null; then
+    branches_to_remove+=("$branch")
+    continue
+  fi
+
+  # Check if branch is gone from remote
+  if ! git rev-parse --verify "origin/$branch" >/dev/null 2>&1; then
+    if [[ "$merged_only" = false ]]; then
+      branches_to_remove+=("$branch")
+    fi
+    continue
+  fi
+
+  # Check if branch is stale (no commits in 30 days)
+  last_commit=$(git log -1 --format='%ct' "$branch" 2>/dev/null || echo "0")
+  if [[ "$last_commit" != "0" ]]; then
+    cutoff=$(date -v-30d +%s 2>/dev/null || date -d "30 days ago" +%s)
+    if [[ "$last_commit" -lt "$cutoff" ]]; then
+      branches_stale+=("$branch")
+    fi
+  fi
+done < <(git for-each-ref --format='%(refname:short)' refs/heads/)
+
+# Remove branches
+if [[ ${#branches_to_remove[@]} -gt 0 ]]; then
+  printf '\nBranches to remove (%d):\n' "${#branches_to_remove[@]}"
+  printf '  %s\n' "${branches_to_remove[@]}"
+
+  if [[ "$prune" = true ]] && [[ "$dry_run" = false ]]; then
+    for branch in "${branches_to_remove[@]}"; do
+      git branch -d "$branch" 2>/dev/null || git branch -D "$branch" 2>/dev/null
+    done
+    printf 'Removed %d branches\n' "${#branches_to_remove[@]}"
+  elif [[ "$dry_run" = true ]]; then
+    printf '[dry-run] Would remove %d branches\n' "${#branches_to_remove[@]}"
+  fi
+else
+  printf '\nNo branches to remove\n'
+fi
+
+# Show stale branches
+if [[ ${#branches_stale[@]} -gt 0 ]]; then
+  printf '\nStale branches (>30 days old, %d):\n' "${#branches_stale[@]}"
+  for branch in "${branches_stale[@]}"; do
+    last_date=$(git log -1 --format='%ci' "$branch" 2>/dev/null | cut -d' ' -f1)
+    printf '  %s (last: %s)\n' "$branch" "$last_date"
+  done
+fi
+
+# Show PR status for current branch
+if [[ "$current_branch" != "$main_branch" ]] && command -v gh >/dev/null 2>&1; then
+  pr_url=$(gh pr view --json url --jq '.url' 2>/dev/null || echo "")
+  if [[ -n "$pr_url" ]]; then
+    pr_status=$(gh pr view --json state,mergeable --jq '"\(.state) / \(.mergeable)"' 2>/dev/null || echo "unknown")
+    printf '\nCurrent branch PR: %s (%s)\n' "$pr_url" "$pr_status"
+  fi
+fi
+
+# Check for force-push on current branch
+if [[ "$check_force_push" = true ]] && [[ "$current_branch" != "$main_branch" ]]; then
+  printf '\nChecking for force-push on current branch...\n'
+  if git rev-parse --verify "origin/$current_branch" >/dev/null 2>&1; then
+    local_head=$(git rev-parse "$current_branch")
+    remote_head=$(git rev-parse "origin/$current_branch")
+
+    # Check if local is ahead of remote (diverged or force-pushed)
+    if [[ "$local_head" != "$remote_head" ]]; then
+      # Check if remote contains commits not in local (sign of force push)
+      if git merge-base --is-ancestor "$remote_head" "$local_head" 2>/dev/null; then
+        if ! git merge-base --is-ancestor "$local_head" "$remote_head" 2>/dev/null; then
+          printf '⚠️  Local branch is ahead of remote and may have been force-pushed\n'
+          printf '   Local:  %s\n' "$local_head"
+          printf '   Remote: %s\n' "$remote_head"
+          printf '   Run: git reset --hard origin/%s\n' "$current_branch"
+        fi
+      elif git merge-base --is-ancestor "$local_head" "$remote_head" 2>/dev/null; then
+        printf '⚠️  Remote is ahead of local (pull required)\n'
+        printf '   Run: git pull\n'
+      else
+        printf '⚠️  Branch has diverged from remote\n'
+        printf '   Local:  %s\n' "$local_head"
+        printf '   Remote: %s\n' "$remote_head"
+      fi
+    else
+      printf '✓ Local and remote are in sync\n'
+    fi
+  else
+    printf 'ℹ️  No remote tracking branch found\n'
+  fi
+fi

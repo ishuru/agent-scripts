@@ -57,7 +57,7 @@ This is a practical, minimal checklist to get a new macOS (SwiftPM) menubar app 
 ## 7) Release flow (shared pattern)
 1. `git status` clean.
 2. Update `version.env` + changelog.
-3. `Scripts/release.sh` (runs lint/test, sign/notarize, appcast verify, GH release, asset check, tag/push). 
+3. `Scripts/release.sh` (runs lint/test, sign/notarize, appcast verify, GH release, asset check, tag/push).
 4. If `RUN_SPARKLE_UPDATE_TEST=1`, perform manual update confirmation.
 
 ## 8) Verification checklist

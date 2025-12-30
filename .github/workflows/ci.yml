@@ -1,0 +1,119 @@
+name: CI Checks
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  consistency:
+    name: Consistency Checks
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run consistency checks
+        run: ./scripts/check-consistency --verbose
+
+      - name: Check script permissions
+        run: |
+          for script in scripts/*.sh scripts/committer scripts/check-consistency scripts/git-sync; do
+            if [ -f "$script" ]; then
+              if [ -x "$script" ]; then
+                echo "✓ $script is executable"
+              else
+                echo "✗ $script is not executable"
+                exit 1
+              fi
+            fi
+          done
+
+  docs:
+    name: Documentation Validation
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install tsx
+        run: npm install -g tsx
+
+      - name: Validate docs
+        run: npx tsx scripts/doc-validator.ts
+
+      - name: Check front-matter
+        run: |
+          for file in docs/*.md; do
+            if ! grep -q "^summary:" "$file"; then
+              echo "✗ $file missing summary in front-matter"
+              exit 1
+            fi
+          done
+
+  helpers:
+    name: Helper Tests
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install tsx
+        run: npm install -g tsx
+
+      - name: Run test suite
+        run: ./scripts/test-helpers.sh
+
+  lint-bash:
+    name: Bash Lint
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: brew install shellcheck
+
+      - name: Run ShellCheck
+        run: |
+          for script in scripts/*.sh scripts/committer scripts/check-consistency scripts/git-sync; do
+            if [ -f "$script" ]; then
+              shellcheck "$script" || echo "ShellCheck issues in $script"
+            fi
+          done
+        continue-on-error: true
+
+  lint-typescript:
+    name: TypeScript Lint
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install tsx
+        run: npm install -g tsx
+
+      - name: Type check TypeScript files
+        run: |
+          for file in scripts/*.ts; do
+            if [ -f "$file" ]; then
+              npx tsx --check "$file" || echo "Type check note for $file"
+            fi
+          done
+        continue-on-error: true

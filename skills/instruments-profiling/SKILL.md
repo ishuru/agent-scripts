@@ -85,5 +85,5 @@ Use these rules:
 
 - Confirm trace process path matches target build.
 - Confirm stacks show expected app frames.
-- Capture covers the slow operation (startup/refresh). 
+- Capture covers the slow operation (startup/refresh).
 - Export stacks for automated diffing if optimizing.

@@ -4,6 +4,25 @@ summary: Timeline of guardrail helper changes mirrored from Sweetistics and rela
 
 # Changelog
 
+## 2025-12-30 — Shared Helper Expansion
+- Added `scripts/git-sync`: branch hygiene helper for merged/stale branch detection, PR status awareness, safe cleanup with `--prune`/`--dry-run` modes, and `--check-force-push` for detecting divergence.
+- Added `scripts/doc-validator.ts`: docs/ folder validator checking front-matter completeness, internal link integrity, and markdown quality.
+- Added `scripts/safe-op.ts`: backup/restore utility for destructive operations with timestamped backups in `.context/backups/` with operation logging.
+- Added `scripts/check-consistency`: cross-platform consistency enforcer for line endings (LF/CRLF), executable permissions, trailing whitespace, EOF newlines, and TODO/FIXME tracking with `--fix` mode.
+- Added `scripts/test-helpers.sh`: comprehensive test suite validating all helpers work correctly with isolated test repos.
+- Added `scripts/pre-commit.sh`: pre-commit hook running consistency checks and docs validation before commits.
+- Added `scripts/tui.ts`: terminal-based dashboard with keyboard navigation, live output, and status indicators. Run with `npx tsx scripts/tui.ts`.
+- Added `scripts/tui.sh`: pure bash TUI alternative with no dependencies for maximum portability. Run with `./scripts/tui.sh`.
+- Added `Makefile`: convenient targets for `make check`, `make git:sync`, `make test`, `make setup-hook`, and `make sync-to` for multi-repo deployment.
+- Added `.github/workflows/ci.yml`: GitHub Actions workflow for consistency checks, docs validation, and helper testing.
+- Added `.vscode/tasks.json` and `.vscode/extensions.json`: VS Code tasks and recommended extensions for editor integration.
+- Added `ui/`: modern web dashboard with helper cards, live output, quick actions, statistics, and settings panel. Open with `cd ui && python3 -m http.server 8080`.
+- Added `docs/integration.md`: setup guide for integrating helpers into other repos including CI configuration.
+- Added `docs/quickstart.md`: 5-minute setup guide for new repositories.
+- Added `docs/package-scripts.md`: npm script templates and examples.
+- Updated `.gitignore` to exclude `.context/backups/` and `*.bak` files.
+- Updated README with quick start section, Makefile documentation, and UI options.
+
 ## 2025-12-22 — Remove Custom rm Shim
 - Dropped `bin/rm` and `scripts/trash.ts`; rely on the system `trash` command for recoverable deletes.
 

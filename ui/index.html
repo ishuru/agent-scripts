@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Scripts Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <svg class="logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        <div>
+          <h1>Agent Scripts</h1>
+          <p class="subtitle">Helper utilities dashboard</p>
+        </div>
+      </div>
+      <div class="header-status">
+        <div class="status-indicator" id="systemStatus">
+          <span class="status-dot status-ok"></span>
+          <span class="status-text">System Ready</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Grid -->
+    <main class="main-grid">
+      <!-- Helpers Panel -->
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Helpers</h2>
+          <button class="btn-icon" id="refreshHelpers" title="Refresh status">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+              <path d="M16 21h5v-5"/>
+            </svg>
+          </button>
+        </div>
+        <div class="helpers-grid" id="helpersGrid">
+          <!-- Helper cards will be injected here -->
+        </div>
+      </section>
+
+      <!-- Output Panel -->
+      <section class="panel panel-output">
+        <div class="panel-header">
+          <h2>Output</h2>
+          <div class="panel-actions">
+            <button class="btn-icon" id="clearOutput" title="Clear output">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+            </button>
+            <button class="btn-icon" id="copyOutput" title="Copy output">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="output-container" id="outputContainer">
+          <div class="output-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <p>Run a helper to see output</p>
+          </div>
+          <pre class="output-content" id="outputContent"></pre>
+        </div>
+      </section>
+
+      <!-- Quick Actions Panel -->
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Quick Actions</h2>
+        </div>
+        <div class="actions-list">
+          <button class="action-btn" data-action="check-all">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>Run All Checks</span>
+          </button>
+          <button class="action-btn" data-action="sync-git">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 4 23 10 17 10"/>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+            </svg>
+            <span>Sync Branches</span>
+          </button>
+          <button class="action-btn" data-action="backup-all">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            <span>Create Backup</span>
+          </button>
+          <button class="action-btn" data-action="setup-hook">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span>Setup Hooks</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Stats Panel -->
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Statistics</h2>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="totalHelpers">7</div>
+            <div class="stat-label">Total Helpers</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value stat-success" id="passedChecks">0</div>
+            <div class="stat-label">Passed</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value stat-warning" id="warnings">0</div>
+            <div class="stat-label">Warnings</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value stat-error" id="errors">0</div>
+            <div class="stat-label">Errors</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Settings</h2>
+          <button class="btn-icon" id="closeSettings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="setting-group">
+            <label>
+              <input type="checkbox" id="autoFix" checked>
+              Auto-fix issues when possible
+            </label>
+          </div>
+          <div class="setting-group">
+            <label>
+              <input type="checkbox" id="verboseOutput">
+              Verbose output
+            </label>
+          </div>
+          <div class="setting-group">
+            <label for="maxBackups">Max backups per file</label>
+            <input type="number" id="maxBackups" value="10" min="1" max="50">
+          </div>
+          <div class="setting-group">
+            <label>
+              <input type="checkbox" id="runPreCommit" checked>
+              Enable pre-commit checks
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
