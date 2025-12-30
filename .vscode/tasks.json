@@ -1,0 +1,83 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "check: Run consistency checks",
+      "type": "shell",
+      "command": "./scripts/check-consistency",
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "check:fix: Auto-fix consistency issues",
+      "type": "shell",
+      "command": "./scripts/check-consistency",
+      "args": ["--fix"],
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "docs: Validate documentation",
+      "type": "shell",
+      "command": "npx",
+      "args": ["tsx", "scripts/doc-validator.ts"],
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "git:sync: Show branch status",
+      "type": "shell",
+      "command": "./scripts/git-sync",
+      "args": ["--dry-run"],
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "git:prune: Remove merged branches",
+      "type": "shell",
+      "command": "./scripts/git-sync",
+      "args": ["--prune"],
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "test: Run helper test suite",
+      "type": "shell",
+      "command": "./scripts/test-helpers.sh",
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "backup: List backups",
+      "type": "shell",
+      "command": "npx",
+      "args": ["tsx", "scripts/safe-op.ts", "list"],
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "setup: Install pre-commit hook",
+      "type": "shell",
+      "command": "ln",
+      "args": ["-sf", "../../scripts/pre-commit.sh", ".git/hooks/pre-commit"],
+      "group": "build",
+      "presentation": {
+        "reveal": "always"
+      }
+    }
+  ]
+}

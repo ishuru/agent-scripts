@@ -1,0 +1,181 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Consistency checker for line endings, file permissions, and common issues
+
+usage() {
+  printf 'Usage: %s [--fix] [--verbose]\n' "$(basename "$0")" >&2
+  printf '\nOptions:\n' >&2
+  printf '  --fix       Automatically fix issues where possible\n' >&2
+  printf '  --verbose   Show all checks, not just failures\n' >&2
+  exit 2
+}
+
+fix=false
+verbose=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --fix) fix=true ;;
+    --verbose) verbose=true ;;
+    -h|--help) usage ;;
+    *) printf 'Unknown option: %s\n' "$1" >&2; usage ;;
+  esac
+  shift
+done
+
+errors=0
+warnings=0
+fixed=0
+
+# Color output
+red='\033[0;31m'
+green='\033[0;32m'
+yellow='\033[0;33m'
+nc='\033[0m'
+
+error() {
+  printf "${red}❌ %s${nc}\n" "$1" >&2
+  ((errors++))
+}
+
+warning() {
+  printf "${yellow}⚠️  %s${nc}\n" "$1" >&2
+  ((warnings++))
+}
+
+info() {
+  if [[ "$verbose" = true ]]; then
+    printf "${green}✓ %s${nc}\n" "$1"
+  fi
+}
+
+fixed_msg() {
+  printf "${green}🔧 Fixed: %s${nc}\n" "$1"
+  ((fixed++))
+}
+
+printf 'Running consistency checks...\n\n'
+
+# Check for Windows line endings
+printf 'Checking line endings...\n'
+while IFS= read -r -d '' file; do
+  if file "$file" | grep -q "CRLF" 2>/dev/null; then
+    if [[ "$fix" = true ]]; then
+      if dos2unix "$file" 2>/dev/null || sed -i '' 's/'$'\r''$//' "$file" 2>/dev/null; then
+        fixed_msg "Converted CRLF to LF: $file"
+      else
+        error "CRLF line endings (auto-fix failed): $file"
+      fi
+    else
+      error "CRLF line endings (use --fix to convert): $file"
+    fi
+  else
+    info "Line endings OK: $file"
+  fi
+done < <(find . -type f \( -name '*.ts' -o -name '*.js' -o -name '*.sh' -o -name '*.md' \) \
+  ! -path '*/node_modules/*' ! -path '*/.git/*' ! -path '*/dist/*' -print0)
+
+# Check execute permissions on scripts
+printf '\nChecking script permissions...\n'
+while IFS= read -r -d '' file; do
+  if [[ -x "$file" ]]; then
+    info "Executable: $file"
+  else
+    if [[ "$fix" = true ]]; then
+      chmod +x "$file"
+      fixed_msg "Made executable: $file"
+    else
+      warning "Not executable (use --fix to add +x): $file"
+    fi
+  fi
+done < <(find . -type f \( -name '*.sh' -o -name 'committer' \) \
+  ! -path '*/node_modules/*' ! -path '*/.git/*' -print0)
+
+# Check for non-executable files with shebang
+printf '\nChecking for files with shebangs lacking execute bit...\n'
+while IFS= read -r -d '' file; do
+  first_line=$(head -n 1 "$file")
+  if [[ "$first_line" =~ ^#! ]]; then
+    if [[ ! -x "$file" ]]; then
+      if [[ "$fix" = true ]]; then
+        chmod +x "$file"
+        fixed_msg "Made executable (has shebang): $file"
+      else
+        warning "Has shebang but not executable: $file"
+      fi
+    else
+      info "Shebang + executable: $file"
+    fi
+  fi
+done < <(find . -type f ! -path '*/node_modules/*' ! -path '*/.git/*' -print0)
+
+# Check for trailing whitespace
+printf '\nChecking for trailing whitespace...\n'
+while IFS= read -r -d '' file; do
+  if grep -q '[[:space:]]$' "$file" 2>/dev/null; then
+    if [[ "$fix" = true ]]; then
+      if sed -i '' 's/[[:space:]]*$//' "$file" 2>/dev/null || \
+         sed -i 's/[[:space:]]*$//' "$file" 2>/dev/null; then
+        fixed_msg "Removed trailing whitespace: $file"
+      else
+        error "Trailing whitespace (auto-fix failed): $file"
+      fi
+    else
+      error "Trailing whitespace (use --fix to remove): $file"
+    fi
+  else
+    info "No trailing whitespace: $file"
+  fi
+done < <(find . -type f \( -name '*.ts' -o -name '*.js' -o -name '*.sh' -o -name '*.md' \) \
+  ! -path '*/node_modules/*' ! -path '*/.git/*' -print0)
+
+# Check for files without newline at EOF
+printf '\nChecking for missing newline at EOF...\n'
+while IFS= read -r -d '' file; do
+  # Check if file ends with newline
+  if [[ -n "$(tail -c 1 "$file" 2>/dev/null)" ]]; then
+    if [[ "$fix" = true ]]; then
+      if echo >> "$file" 2>/dev/null; then
+        fixed_msg "Added newline at EOF: $file"
+      else
+        error "Missing newline at EOF (auto-fix failed): $file"
+      fi
+    else
+      warning "Missing newline at EOF (use --fix to add): $file"
+    fi
+  else
+    info "Ends with newline: $file"
+  fi
+done < <(find . -type f \( -name '*.ts' -o -name '*.js' -o -name '*.sh' -o -name '*.md' \) \
+  ! -path '*/node_modules/*' ! -path '*/.git/*' -print0)
+
+# Check for TODO/FIXME comments
+printf '\nChecking for TODO/FIXME comments...\n'
+while IFS= read -r -d '' file; do
+  count=$(grep -c -i 'TODO\|FIXME\|XXX\|HACK' "$file" 2>/dev/null || true)
+  if [[ "$count" -gt 0 ]]; then
+    warning "Contains TODO/FIXME ($count items): $file"
+    if [[ "$verbose" = true ]]; then
+      grep -n -i 'TODO\|FIXME\|XXX\|HACK' "$file" | head -3 | while IFS= read -r line; do
+        printf "  %s\n" "$line"
+      done
+    fi
+  else
+    info "No TODO/FIXME: $file"
+  fi
+done < <(find . -type f \( -name '*.ts' -o -name '*.js' \) \
+  ! -path '*/node_modules/*' ! -path '*/.git/*' -print0)
+
+# Summary
+printf '\n=== Summary ===\n'
+printf 'Errors:   %d\n' "$errors"
+printf 'Warnings: %d\n' "$warnings"
+if [[ "$fix" = true ]]; then
+  printf 'Fixed:    %d\n' "$fixed"
+fi
+
+if [[ "$errors" -gt 0 ]]; then
+  exit 1
+fi
