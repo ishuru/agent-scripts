@@ -27,10 +27,10 @@ assert_success() {
   shift
   if "$@" >/dev/null 2>&1; then
     printf "${green}✓${nc} %s\n" "$name"
-    ((TESTS_PASSED++))
+    ((TESTS_PASSED++)) || true
   else
     printf "${red}✗${nc} %s\n" "$name"
-    ((TESTS_FAILED++))
+    ((TESTS_FAILED++)) || true
   fi
 }
 
@@ -39,10 +39,10 @@ assert_failure() {
   shift
   if ! "$@" >/dev/null 2>&1; then
     printf "${green}✓${nc} %s\n" "$name"
-    ((TESTS_PASSED++))
+    ((TESTS_PASSED++)) || true
   else
     printf "${red}✗${nc} %s\n" "$name"
-    ((TESTS_FAILED++))
+    ((TESTS_FAILED++)) || true
   fi
 }
 
@@ -52,10 +52,10 @@ assert_contains() {
   local needle="$3"
   if echo "$haystack" | grep -qF "$needle"; then
     printf "${green}✓${nc} %s\n" "$name"
-    ((TESTS_PASSED++))
+    ((TESTS_PASSED++)) || true
   else
     printf "${red}✗${nc} %s\n" "$name"
-    ((TESTS_FAILED++))
+    ((TESTS_FAILED++)) || true
   fi
 }
 
@@ -70,7 +70,12 @@ setup_test_repo() {
   echo "# Test" > README.md
   git add README.md
   git commit -q -m "Initial commit"
-  git checkout -q -b main
+  # Rename default branch to main if needed, or checkout main
+  if git show-ref --verify --quiet refs/heads/main; then
+    git checkout -q main
+  else
+    git checkout -q -b main
+  fi
   echo "$test_repo"
 }
 

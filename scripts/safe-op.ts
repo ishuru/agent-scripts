@@ -42,7 +42,8 @@ function getBackupPath(originalPath: string): string {
 function recordOperation(record: BackupRecord) {
   const logPath = join(BACKUP_DIR, 'operations.jsonl');
   const line = JSON.stringify({ ...record, timestamp: new Date().toISOString() }) + '\n';
-  writeFileSync(logPath, readFileSync(logPath, 'utf8') + line, { flag: 'a' });
+  const existing = existsSync(logPath) ? readFileSync(logPath, 'utf8') : '';
+  writeFileSync(logPath, existing + line, { flag: 'a' });
 }
 
 function backupFile(filePath: string, options: BackupOptions = {}): string {
