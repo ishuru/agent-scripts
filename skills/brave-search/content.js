@@ -42,17 +42,17 @@ try {
 		},
 		signal: AbortSignal.timeout(15000),
 	});
-	
+
 	if (!response.ok) {
 		console.error(`HTTP ${response.status}: ${response.statusText}`);
 		process.exit(1);
 	}
-	
+
 	const html = await response.text();
 	const dom = new JSDOM(html, { url });
 	const reader = new Readability(dom.window.document);
 	const article = reader.parse();
-	
+
 	if (article && article.content) {
 		if (article.title) {
 			console.log(`# ${article.title}\n`);
@@ -60,19 +60,19 @@ try {
 		console.log(htmlToMarkdown(article.content));
 		process.exit(0);
 	}
-	
+
 	// Fallback: try to extract main content
 	const fallbackDoc = new JSDOM(html, { url });
 	const body = fallbackDoc.window.document;
 	body.querySelectorAll("script, style, noscript, nav, header, footer, aside").forEach(el => el.remove());
-	
+
 	const title = body.querySelector("title")?.textContent?.trim();
 	const main = body.querySelector("main, article, [role='main'], .content, #content") || body.body;
-	
+
 	if (title) {
 		console.log(`# ${title}\n`);
 	}
-	
+
 	const text = main?.innerHTML || "";
 	if (text.trim().length > 100) {
 		console.log(htmlToMarkdown(text));

@@ -99,11 +99,16 @@ while IFS= read -r -d '' file; do
   first_line=$(head -n 1 "$file")
   if [[ "$first_line" =~ ^#! ]]; then
     if [[ ! -x "$file" ]]; then
-      if [[ "$fix" = true ]]; then
-        chmod +x "$file"
-        fixed_msg "Made executable (has shebang): $file"
+      # Only warn for .sh files - .ts files with shebangs are run via npx tsx
+      if [[ "$file" == *.sh || "$file" == *.bash ]]; then
+        if [[ "$fix" = true ]]; then
+          chmod +x "$file"
+          fixed_msg "Made executable (has shebang): $file"
+        else
+          warning "Has shebang but not executable: $file"
+        fi
       else
-        warning "Has shebang but not executable: $file"
+        info "Has shebang but not executable (expected for non-shell): $file"
       fi
     else
       info "Shebang + executable: $file"
